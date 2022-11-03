@@ -1,0 +1,42 @@
+name: Run Test CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  taggen:
+#    runs-on: self-hosted-main
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@7884fcad6b5d53d10323aee724dc68d8b9096a2e # tag=v2
+      - name: Generate Docker image tag
+        run: |
+          # Store the timestamp of the commit as a formatted string (UTC time)
+          TIMESTAMP=$(TZ=UTC0 git show --no-patch --no-notes --pretty='%cd' --date='format-local:%Y%m%d%H%M%S' ${GITHUB_SHA})
+          
+          # Get the short commit message
+          COMMIT_MSG=$(git log -n 1 --format="%s" ${GITHUB_SHA})
+          
+          # NOTE: The steps below are performed sequentially instead of via pipe
+          # because I found piping did not maintain ordering (MRK)
+          
+          # Convert uppercase characters to lowercase
+          NORMALIZED_COMMIT_MSG=$(echo $COMMIT_MSG | tr '[:upper:]' '[:lower:]')
+          # Remove all characters except alphanumeric and spaces
+          NORMALIZED_COMMIT_MSG=$(echo $NORMALIZED_COMMIT_MSG | sed 's/[^a-z0-9 ]//g')
+          # Replace consecutive whitespace with a single underscore
+          NORMALIZED_COMMIT_MSG=$(echo $NORMALIZED_COMMIT_MSG | sed -re 's/ +/_/g')
+          
+          DOCKER_TAG_FULL=${TIMESTAMP}_${GITHUB_SHA::7}_${NORMALIZED_COMMIT_MSG}
+          
+          # Shorten to 64 characters
+          DOCKER_TAG=${DOCKER_TAG_FULL::64}
+          echo "DOCKER_TAG=${DOCKER_TAG}"
+          
+          # Write Docker tag to the environment as a variable
+          echo "DOCKER_TAG=${DOCKER_TAG}" >> ${GITHUB_ENV}
