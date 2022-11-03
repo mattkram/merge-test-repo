@@ -36,6 +36,10 @@ jobs:
           
           # Shorten to 64 characters
           DOCKER_TAG=${DOCKER_TAG_FULL::64}
+          
+          # Finally, remove a trailing _ if we happen to end with one
+          DOCKER_TAG=$(echo $DOCKER_TAG | sed 's/_$//g')
+          
           echo "DOCKER_TAG=${DOCKER_TAG}"
           
           # Write Docker tag to the environment as a variable
